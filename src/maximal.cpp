@@ -30,6 +30,7 @@ void maximal(int ind){
 		p[i] = p[j];
 		p[j] = temp;
 	}
+	int rand_num = rand()%n;
 	for(int it=0;it<n;it++){
 		int i = p[it];
 		if(vis[i]==0){
@@ -215,6 +216,116 @@ void uncoarse(int ind){
 			all_grphs[ind-1].partitioned[second_p] = all_grphs[ind].partitioned[i];
 		}
 	}
+	int index = ind - 1;
+	set <pair <int,int> > part_f;
+	set <pair <int,int> > part_s;
+	vector<int> gains;
+	int weight_f = 0;
+	int weight_s = 0;
+	vector<int> vis;
+	for(int i=0;i<all_grphs[index].weight_node.size();i++)
+	{
+		int ie = 0;
+		int ee = 0;
+		for(int j=0;j<all_grphs[index].adj_list[i].size();j++)
+		{
+			int neighbor = all_grphs[index].adj_list[i][j].first;
+			int cost = all_grphs[index].adj_list[i][j].second;
+			if(all_grphs[index].partitioned[neighbor]==all_grphs[index].partitioned[i])
+				ie += cost;
+			else
+				ee += cost;
+		}
+		if(all_grphs[index].partitioned[i]==0)
+		{
+			part_f.insert(make_pair(ee-ie,i)); // TODO add only boundary
+			weight_f += all_grphs[index].weight_node[i];
+		}
+		else
+		{
+			part_s.insert(make_pair(ee-ie,i));
+			weight_s += all_grphs[index].weight_node[i];
+		}
+		gains.push_back(ee-ie);
+		vis.push_back(0);
+	}
+	for(int i=0;;i++) //todo
+	{
+		if(weight_f>weight_s)
+		{
+			if(part_f.size()!=0)
+			{
+				int curr_node = part_f.rbegin()->second;
+				if(vis[curr_node]==1 || gains[curr_node]<0)
+					break;
+				all_grphs[index].partitioned[curr_node] = 1 - all_grphs[index].partitioned[curr_node];
+				part_f.erase(make_pair(gains[curr_node],curr_node));
+				weight_f -= all_grphs[index].weight_node[curr_node];
+				gains[curr_node] = -1 * gains[curr_node];
+				part_s.insert(make_pair(gains[curr_node],curr_node));
+				weight_s += all_grphs[index].weight_node[curr_node];
+				vis[curr_node] = 1;
+				for(int j=0;j<all_grphs[index].adj_list[curr_node].size();j++)
+				{
+					int neighbor = all_grphs[index].adj_list[curr_node][j].first;
+					int cost = all_grphs[index].adj_list[curr_node][j].second;
+					if(all_grphs[index].partitioned[neighbor]==0)
+					{
+						part_f.erase(make_pair(gains[neighbor],neighbor));
+						gains[neighbor] += (2*cost);
+						part_f.insert(make_pair(gains[neighbor],neighbor));
+					}
+					else
+					{
+						part_s.erase(make_pair(gains[neighbor],neighbor));
+						gains[neighbor] -= (2*cost);
+						part_s.insert(make_pair(gains[neighbor],neighbor));
+					}
+
+				}
+			}
+			else
+				break;
+
+		}
+		else
+		{
+			if(part_s.size()!=0)
+			{
+				int curr_node = part_s.rbegin()->second;
+				if(vis[curr_node]==1 || gains[curr_node]<0)
+					break;
+				all_grphs[index].partitioned[curr_node] = 1 - all_grphs[index].partitioned[curr_node];
+				part_s.erase(make_pair(gains[curr_node],curr_node));
+				weight_s -= all_grphs[index].weight_node[curr_node];
+				gains[curr_node] = -1 * gains[curr_node];
+				part_f.insert(make_pair(gains[curr_node],curr_node));
+				weight_f += all_grphs[index].weight_node[curr_node];
+				vis[curr_node] = 1;
+				for(int j=0;j<all_grphs[index].adj_list[curr_node].size();j++)
+				{
+					int neighbor = all_grphs[index].adj_list[curr_node][j].first;
+					int cost = all_grphs[index].adj_list[curr_node][j].second;
+					if(all_grphs[index].partitioned[neighbor]==1)
+					{
+						part_s.erase(make_pair(gains[neighbor],neighbor));
+						gains[neighbor] += (2*cost);
+						part_s.insert(make_pair(gains[neighbor],neighbor));
+					}
+					else
+					{
+						part_f.erase(make_pair(gains[neighbor],neighbor));
+						gains[neighbor] -= (2*cost);
+						part_f.insert(make_pair(gains[neighbor],neighbor));
+					}
+
+				}
+			}
+			else
+				break;
+		}
+	}
+
 }
 
 
@@ -342,18 +453,36 @@ int main(int argc,char ** argv)
 			full_graph.adj_list[i].push_back(make_pair(temp-1, 1));
 		}
 	}
-	vector<int> ans = parts(8,full_graph);
-	int count[8];
-	for(int i=0;i<8;i++){
+	int prts = 8;
+	int iter = 0;
+	vector<int> ans = parts(prts,full_graph);
+	int count[prts];
+	// vector<int> ans;
+	// for(int i=0;i<n;i++){
+	// 	ans.push_back(iter);
+	// 	iter = (iter+1)%prts;
+	// }
+	for(int i=0;i<prts;i++){
 		count[i] = 0;
 	}
-	for(int i=0;i<ans.size();i++)
+	for(int i=0;i<ans.size();i++){
 		count[ans[i]]++;
-
-	for(int i=0;i<8;i++){
+	}
+	for(int i=0;i<prts;i++){
 		cout<<count[i]<<" ";
 	}
 	cout<<endl;
+	cout<<endl;
+
+	int sum = 0;
+	for(int i=0;i<ans.size();i++){
+		for(int j=0;j<full_graph.adj_list[i].size();j++){
+			if(ans[i]!=ans[full_graph.adj_list[i][j].first]){
+				sum += full_graph.adj_list[i][j].second;
+			}
+		}
+	}
+	cout<<sum/2<<endl;
 
 	// all_grphs.push_back(full_graph);
 	// for(int i=0;i<30;i++){
