@@ -1,5 +1,5 @@
 #include <bits/stdc++.h>
-const int MAX_N = 100000;
+const int MAX_N = 10000000;
 using namespace std;
 
 struct Graph{
@@ -27,7 +27,6 @@ void maximal(int ind){
 			int adj_num = all_grphs[ind].adj_list[i].size();
 			for(int j=0;j<adj_num;j++){
 				if(vis[all_grphs[ind].adj_list[i][j].first]==0){
-					cout<<"ss : "<<i<<"  "<<j<<endl;
 					if(all_grphs[ind].adj_list[i][j].second>max){
 						max = all_grphs[ind].adj_list[i][j].second;
 						maxind = all_grphs[ind].adj_list[i][j].first;
@@ -50,35 +49,55 @@ void maximal(int ind){
 			}
 		}
 	}
+
 	for(int i=0;i<ans_gp.merged_pairs.size();i++){
 		if(ans_gp.merged_pairs[i].second!=-1)
 			ans_gp.weight_node.push_back(all_grphs[ind].weight_node[ans_gp.merged_pairs[i].first] + all_grphs[ind].weight_node[ans_gp.merged_pairs[i].second]);
 		else
 			ans_gp.weight_node.push_back(all_grphs[ind].weight_node[ans_gp.merged_pairs[i].first]);
 	}
+
 	for(int i=0;i<ans_gp.merged_pairs.size();i++){
 		int first_p = ans_gp.merged_pairs[i].first;
 		int second_p = ans_gp.merged_pairs[i].second;
-		int cost[ans_gp.merged_pairs.size()];
-		for(int j=0;j<ans_gp.merged_pairs.size();j++){
-			cost[j] = 0;
-		}
+		// int cost[ans_gp.merged_pairs.size()];
+		map <int, int > cost;
 		for(int j=0;j<all_grphs[ind].adj_list[first_p].size();j++){
-			cost[merge[all_grphs[ind].adj_list[first_p][j].first]] += all_grphs[ind].adj_list[first_p][j].second;
-		}
-		if(second_p!=-1){
-			for(int j=0;j<all_grphs[ind].adj_list[second_p].size();j++){
-				cost[merge[all_grphs[ind].adj_list[second_p][j].first]] += all_grphs[ind].adj_list[second_p][j].second;
+			int node = merge[all_grphs[ind].adj_list[first_p][j].first];
+			int cost_val = all_grphs[ind].adj_list[first_p][j].second;
+			if(cost.find(node)==cost.end()){
+				cost.insert(pair <int, int> (node,cost_val));
+			}
+			else{
+				cost.find(node)->second += cost_val;
 			}
 		}
+
+		if(second_p!=-1){
+			for(int j=0;j<all_grphs[ind].adj_list[second_p].size();j++){
+				int node = merge[all_grphs[ind].adj_list[second_p][j].first];
+				int cost_val = all_grphs[ind].adj_list[second_p][j].second;
+				if(cost.find(node)==cost.end()){
+					cost.insert(pair <int, int> (node,cost_val));
+				}
+				else{
+					cost.find(node)->second += cost_val;
+				}
+			}
+		}
+		
 		vector< pair<int, int> > temp;
-		for(int j=0;j<ans_gp.merged_pairs.size();j++){
-			if(cost[j]!=0 && j!=i){
-				temp.push_back(make_pair(j, cost[j]));
+		map<int,int>::iterator it;
+		for(it = cost.begin();it!=cost.end();++it){
+			int node = it->first;
+			int cost_val = it->second;
+			if(node!=i){
+				temp.push_back(make_pair(node,cost_val));
 			}
 		}
 		ans_gp.adj_list.push_back(temp);
 	}
+	cout<<ans_gp.merged_pairs.size()<<endl;
 	all_grphs.push_back(ans_gp);
 }
 
@@ -111,22 +130,26 @@ int main(int argc,char ** argv)
 	vector< pair<int, int> > empty;
 	for(int i=0;i<n;i++)
 	{
-		int temp;
-		cin >> temp;
-		full_graph.weight_node.push_back(temp);
+		full_graph.weight_node.push_back(1);
 		full_graph.merged_pairs.push_back(make_pair(i, -1));
 		full_graph.adj_list.push_back(empty);
 	}
-	for(int i=0;i<e;i++)
+	string temp;
+	getline(cin, temp);
+	for(int i=0;i<n;i++)
 	{
-		int u,v,c;
-		cin >>u >>v>>c;
-		u--;v--;
-		full_graph.adj_list[u].push_back(make_pair(v,c));
-		full_graph.adj_list[v].push_back(make_pair(u,c));
+		string line;
+		getline( cin, line );
+		istringstream is(line);
+		int temp;
+		while( is >> temp ) {
+			full_graph.adj_list[i].push_back(make_pair(temp-1, 1));
+		}
 	}
 	all_grphs.push_back(full_graph);
-	maximal(0);
-	print_graph(all_grphs[0]);
-	print_graph(all_grphs[1]);
+	for(int i=0;i<300;i++){
+		maximal(i);
+	}
+	// print_graph(all_grphs[300]);
+	// print_graph(all_grphs[1]);
 }
