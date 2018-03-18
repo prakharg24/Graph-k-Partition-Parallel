@@ -24,7 +24,7 @@ void maximal(int ind){
 		p[i] = i;
 	}
 	int counter = 0;
-	for (int i=n; i>0; --i){
+	for (int i=n-1; i>0; i--){
 		int j = rand()%i;
 		int temp = p[i];
 		p[i] = p[j];
@@ -110,7 +110,6 @@ void maximal(int ind){
 		}
 		ans_gp.adj_list.push_back(temp);
 	}
-	cout<<ans_gp.merged_pairs.size()<<endl;
 	all_grphs.push_back(ans_gp);
 }
 
@@ -139,21 +138,21 @@ void print_graph(Graph a){
 void GGGP(int index)
 {
 	int n = all_grphs[index].weight_node.size();
-	int gain[n];
+	vector<int> gain;
 	set <pair<int,int> > possible;
 	for(int i=0;i<n;i++)
 	{
-		gain[i] = 0;
+		gain.push_back(0);
 		for(int j=0;j<all_grphs[index].adj_list[i].size();j++)
 		{
 			gain[i] += all_grphs[index].adj_list[i][j].second;
 		}
 	}
 	int total_wt_node = 0;
-	int vis[n];
+	vector<int> vis;
 	for(int i=0;i<n;i++)
 	{
-		vis[i] = 0;
+		vis.push_back(0);
 		total_wt_node += all_grphs[index].weight_node[i];
 	}
 	int sum_node_wt = 0;
@@ -191,8 +190,7 @@ void GGGP(int index)
 				{
 					curr_node = possible.rbegin()->second;
 					sum_node_wt += all_grphs[index].weight_node[curr_node];
-					if(sum_node_wt)
-						vis[curr_node] = 1;
+					vis[curr_node] = 1;
 					possible.erase(make_pair(gain[curr_node],curr_node));
 					all_grphs[index].partitioned[curr_node] = 1;
 				}
@@ -216,6 +214,7 @@ void uncoarse(int ind){
 			all_grphs[ind-1].partitioned[second_p] = all_grphs[ind].partitioned[i];
 		}
 	}
+	
 	int index = ind - 1;
 	set <pair <int,int> > part_f;
 	set <pair <int,int> > part_s;
@@ -249,15 +248,18 @@ void uncoarse(int ind){
 		gains.push_back(ee-ie);
 		vis.push_back(0);
 	}
-	for(int i=0;;i++) //todo
+	int counter=0;
+	for(int i=0;i<100;i++) //todo
 	{
 		if(weight_f>weight_s)
 		{
 			if(part_f.size()!=0)
 			{
 				int curr_node = part_f.rbegin()->second;
-				if(vis[curr_node]==1 || gains[curr_node]<0)
+				if(vis[curr_node]==1 || counter > 20)
 					break;
+				if(gains[curr_node]<0)
+					counter++;
 				all_grphs[index].partitioned[curr_node] = 1 - all_grphs[index].partitioned[curr_node];
 				part_f.erase(make_pair(gains[curr_node],curr_node));
 				weight_f -= all_grphs[index].weight_node[curr_node];
@@ -293,8 +295,10 @@ void uncoarse(int ind){
 			if(part_s.size()!=0)
 			{
 				int curr_node = part_s.rbegin()->second;
-				if(vis[curr_node]==1 || gains[curr_node]<0)
+				if(vis[curr_node]==1 || counter>20)
 					break;
+				if(gains[curr_node]<0)
+					counter++;
 				all_grphs[index].partitioned[curr_node] = 1 - all_grphs[index].partitioned[curr_node];
 				part_s.erase(make_pair(gains[curr_node],curr_node));
 				weight_s -= all_grphs[index].weight_node[curr_node];
@@ -325,7 +329,6 @@ void uncoarse(int ind){
 				break;
 		}
 	}
-
 }
 
 
@@ -337,14 +340,13 @@ vector<int> parts(int k,Graph g)
 	}
 	all_grphs.clear();
 	all_grphs.push_back(g);
-	for(int i=0;i<50;i++){
+	int num_levels = 10;
+	for(int i=0;i<num_levels;i++){
 		maximal(i);
 	}
-	// cout<<"yoooo"<<endl;
-	GGGP(50);
-	cout<<"GGGP done"<<endl;
-	for(int i=0;i<50;i++){
-		uncoarse(50-i);
+	GGGP(num_levels);
+	for(int i=0;i<num_levels;i++){
+		uncoarse(num_levels-i);
 	}
 	vector<int> partitioned = all_grphs[0].partitioned;
 	Graph f;
@@ -404,8 +406,6 @@ vector<int> parts(int k,Graph g)
 			s.adj_list.push_back(temp);
 		}
 	}
-	cout << "first graph" << iter_f<<endl;
-	cout << "second graph" << iter_s<<endl;
 	vector<int> partition_s = parts(k/2,s);
 	vector<int> partition_f = parts(k/2,f);
 	iter_f = 0;
@@ -426,9 +426,20 @@ vector<int> parts(int k,Graph g)
 	return partitioned;
 }
 
+vector<int> cyclic(int k, Graph g)
+{
+	vector<int> partitioned;
+	int n = g.weight_node.size();
+	for(int i=0;i<n;i++)
+	{
+		partitioned.push_back(i%k);
+	}
+	return partitioned;
+}
 
 int main(int argc,char ** argv)
 {
+
 	srand (static_cast <unsigned> (time(0)));
 	int n,e;
 	cin >> n >>e;
@@ -453,9 +464,15 @@ int main(int argc,char ** argv)
 			full_graph.adj_list[i].push_back(make_pair(temp-1, 1));
 		}
 	}
-	int prts = 8;
-	int iter = 0;
-	vector<int> ans = parts(prts,full_graph);
+	int prts = atoi(argv[1]);
+	vector<int> ans;
+	try{
+		ans = parts(prts,full_graph);
+	}
+	catch(exception e){
+		ans = cyclic(prts,full_graph);
+	}
+
 	int count[prts];
 	// vector<int> ans;
 	// for(int i=0;i<n;i++){
@@ -468,21 +485,37 @@ int main(int argc,char ** argv)
 	for(int i=0;i<ans.size();i++){
 		count[ans[i]]++;
 	}
+	int maxx = -1;
+	int minn = n+1;
 	for(int i=0;i<prts;i++){
-		cout<<count[i]<<" ";
+		// cout<<count[i]<<" ";
+		maxx = max(maxx,count[i]);
+		minn = min(minn,count[i]);
 	}
-	cout<<endl;
-	cout<<endl;
 
-	int sum = 0;
-	for(int i=0;i<ans.size();i++){
-		for(int j=0;j<full_graph.adj_list[i].size();j++){
-			if(ans[i]!=ans[full_graph.adj_list[i][j].first]){
-				sum += full_graph.adj_list[i][j].second;
-			}
-		}
+	if(1.0 * (maxx - minn) > (0.05 * n))
+	{
+		ans = cyclic(prts,full_graph);
 	}
-	cout<<sum/2<<endl;
+
+	for(int i=0;i<ans.size();i++)
+	{
+		cout << ans[i] << " ";
+	}
+
+	// cout<<endl;
+	// cout<<endl;
+
+	// int sum = 0;
+	// for(int i=0;i<ans.size();i++){
+	// 	for(int j=0;j<full_graph.adj_list[i].size();j++){
+	// 		if(ans[i]!=ans[full_graph.adj_list[i][j].first]){
+	// 			sum += full_graph.adj_list[i][j].second;
+	// 		}
+	// 	}
+	// }
+	// cout<<sum/2<<endl;
+
 
 	// all_grphs.push_back(full_graph);
 	// for(int i=0;i<30;i++){
